@@ -451,8 +451,7 @@ button:disabled {
   overflow: hidden;
   padding: clamp(18px, 3vw, 30px);
   display: grid;
-  grid-template-rows: auto 1fr auto;
-  gap: 14px;
+  align-items: stretch;
   text-align: center;
   background:
     repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 7px),
@@ -473,11 +472,88 @@ button:disabled {
 .center h2 {
   margin: 0;
   color: var(--gold);
-  font-family: Georgia, "Songti SC", serif;
-  font-size: clamp(24px, 3.8vw, 48px);
-  line-height: 1.1;
+  font-size: clamp(16px, 1.7vw, 22px);
+  line-height: 1.25;
   letter-spacing: 0;
-  text-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+  text-shadow: 0 8px 20px rgba(0, 0, 0, 0.24);
+}
+
+.table-plays {
+  position: relative;
+  z-index: 1;
+  min-height: 100%;
+  display: grid;
+  grid-template-columns: minmax(118px, 0.92fr) minmax(190px, 1fr) minmax(118px, 0.92fr);
+  grid-template-rows: minmax(150px, 1fr) auto;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.table-state {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  align-self: center;
+  border: 1px solid rgba(255, 221, 153, 0.16);
+  border-radius: 8px;
+  background: rgba(6, 42, 36, 0.42);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.table-play {
+  min-width: 0;
+  min-height: 142px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(255, 221, 153, 0.16);
+  border-radius: 8px;
+  background: rgba(8, 50, 43, 0.42);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.table-play-left {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.table-play-right {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.table-play-human {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  min-height: 122px;
+}
+
+.table-play-label {
+  min-width: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: rgba(255, 247, 230, 0.78);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.table-play-label span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table-play-label strong {
+  flex: 0 0 auto;
+  color: var(--gold);
 }
 
 .play-area {
@@ -491,18 +567,63 @@ button:disabled {
   flex-wrap: wrap;
 }
 
+.table-play .play-area {
+  width: min(100%, calc(var(--played-width, 0px) + 16px));
+  min-height: 74px;
+  align-self: center;
+  justify-self: center;
+  display: block;
+  overflow: visible;
+}
+
+.table-play-human .play-area {
+  min-height: 74px;
+}
+
 .play-area .card {
   margin-right: 0;
 }
 
+.played-card {
+  position: absolute;
+  left: max(0px, calc((100% - var(--played-width, 0px)) / 2));
+  top: 50%;
+  transform: translate(calc(var(--played-index) * var(--played-overlap, 18px)), -50%);
+}
+
+.played-card .card {
+  width: 54px;
+  height: 76px;
+  border-radius: 7px;
+  box-shadow: 0 8px 14px rgba(0, 0, 0, 0.24), inset 0 0 0 2px rgba(255, 255, 255, 0.28);
+}
+
+.played-card .card.small .corner strong {
+  font-size: 10px;
+}
+
+.played-card .card.small .pip.large {
+  font-size: 19px;
+}
+
 .empty-table {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   border-style: dashed;
+}
+
+.table-play.pass {
+  opacity: 0.78;
 }
 
 .table-note {
   position: relative;
   z-index: 1;
   color: rgba(255, 247, 230, 0.76);
+  font-size: 13px;
+  line-height: 1.35;
 }
 
 .thinking {
@@ -938,6 +1059,31 @@ button:disabled {
     grid-template-rows: auto auto auto;
   }
 
+  .table-plays {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto;
+  }
+
+  .table-state {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .table-play-left {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .table-play-right {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .table-play-human {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
   .player {
     min-height: 122px;
   }
@@ -982,6 +1128,33 @@ button:disabled {
     justify-content: flex-start;
     overflow-x: hidden;
     padding-left: 20px;
+  }
+
+  .table-plays {
+    grid-template-columns: 1fr;
+  }
+
+  .table-state,
+  .table-play-left,
+  .table-play-right,
+  .table-play-human {
+    grid-column: 1;
+  }
+
+  .table-state {
+    grid-row: 1;
+  }
+
+  .table-play-left {
+    grid-row: 2;
+  }
+
+  .table-play-right {
+    grid-row: 3;
+  }
+
+  .table-play-human {
+    grid-row: 4;
   }
 
   .card.small {

@@ -9,6 +9,7 @@ const SUITS = [
 const SAVE_KEY = "landlords-prd-game-state-v1";
 const BGM_SRC = "./assets/audio/bgm.mp3";
 const AI_DELAY = 650;
+const PLAYER_IDS = ["left", "human", "right"];
 const PATTERN_NAMES = {
   pass: "不出",
   single: "单张",
@@ -82,6 +83,18 @@ function createInitialState() {
   };
 }
 
+function createEmptyTablePlays() {
+  return Object.fromEntries(PLAYER_IDS.map((id) => [id, null]));
+}
+
+function ensureTablePlays() {
+  if (!state.tablePlays) state.tablePlays = createEmptyTablePlays();
+  for (const id of PLAYER_IDS) {
+    if (!(id in state.tablePlays)) state.tablePlays[id] = null;
+  }
+  return state.tablePlays;
+}
+
 function newGame(difficulty = state.difficulty || "normal") {
   const deck = shuffle(createDeck());
   const players = [
@@ -112,6 +125,7 @@ function newGame(difficulty = state.difficulty || "normal") {
     robTurns: 0,
     lastPlay: null,
     currentTableCards: [],
+    tablePlays: createEmptyTablePlays(),
     passCount: 0,
     multiplier: 1,
     baseScore: 1,
@@ -119,11 +133,12 @@ function newGame(difficulty = state.difficulty || "normal") {
     history: [],
     selectedHintIndex: 0,
     playedHandCounts: { human: 0, left: 0, right: 0 },
-    message: `${players[firstBidder].name} 先叫地主`,
+    message: "",
     countdown: 20,
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
+  state.message = turnMessage(players[firstBidder]);
   selectedIds = new Set();
   persist();
   render();
@@ -216,6 +231,19 @@ function humanCanAct() {
   return state.phase !== "home" && currentPlayer()?.id === "human" && !currentPlayer().thinking;
 }
 
+function turnMessage(player = currentPlayer(), freshRound = false) {
+  if (!player) return "准备开始";
+  if (state.phase === "bidding") {
+    const action = state.bidMode === "call" ? "叫地主" : "抢地主";
+    return player.id === "human" ? `轮到你${action}` : `等待${player.name}${action}`;
+  }
+  if (state.phase === "playing") {
+    if (freshRound) return player.id === "human" ? "你先出牌" : `${player.name}先出牌`;
+    return player.id === "human" ? "轮到你出牌" : `等待${player.name}出牌`;
+  }
+  return state.message || "准备开始";
+}
+
 function handleBid(wants) {
   if (!humanCanAct() || state.phase !== "bidding") return;
   applyBidDecision(state.currentPlayerIndex, wants);
@@ -260,6 +288,7 @@ function applyBidDecision(playerIndex, wants) {
   }
   state.currentPlayerIndex = next;
   state.countdown = 20;
+  state.message = turnMessage(state.players[next]);
   state.updatedAt = Date.now();
   persist();
   render();
@@ -276,8 +305,9 @@ function confirmLandlord(index) {
   state.currentPlayerIndex = index;
   state.lastPlay = null;
   state.currentTableCards = [];
+  state.tablePlays = createEmptyTablePlays();
   state.passCount = 0;
-  state.message = `${landlord.name} 成为地主并首出`;
+  state.message = turnMessage(landlord, true);
   state.countdown = 30;
   addHistory(landlord, `成为地主，拿到底牌 ${state.landlordCards.map((c) => c.displayName).join(" ")}`);
   playSound("landlord");
@@ -321,6 +351,7 @@ function commitPlay(playerIndex, cards, pattern) {
   player.playedCards = player.playedCards.concat(cards);
   state.playedHandCounts[player.id] += 1;
   state.currentTableCards = cards;
+  ensureTablePlays()[player.id] = { type: "play", cards, pattern };
   state.lastPlay = { playerIndex, playerId: player.id, cards, pattern };
   state.passCount = 0;
   selectedIds = new Set();
@@ -335,7 +366,7 @@ function commitPlay(playerIndex, cards, pattern) {
     return;
   }
   state.currentPlayerIndex = nextIndex(playerIndex);
-  state.message = `${state.players[state.currentPlayerIndex].name} 行动`;
+  state.message = turnMessage();
   state.countdown = currentPlayer().type === "human" ? 30 : 12;
   persist();
   render();
@@ -347,16 +378,18 @@ function commitPass(playerIndex) {
   state.passCount += 1;
   playSound("pass");
   addHistory(player, "不出");
+  ensureTablePlays()[player.id] = { type: "pass", cards: [], pattern: identifyPattern([]) };
   selectedIds = new Set();
   if (state.passCount >= 2 && state.lastPlay) {
     state.currentTableCards = [];
     state.currentPlayerIndex = state.lastPlay.playerIndex;
     state.lastPlay = null;
+    state.tablePlays = createEmptyTablePlays();
     state.passCount = 0;
-    state.message = `${state.players[state.currentPlayerIndex].name} 获得新一轮首出`;
+    state.message = turnMessage(currentPlayer(), true);
   } else {
     state.currentPlayerIndex = nextIndex(playerIndex);
-    state.message = `${state.players[state.currentPlayerIndex].name} 行动`;
+    state.message = turnMessage();
   }
   state.countdown = currentPlayer().type === "human" ? 30 : 12;
   persist();
@@ -682,6 +715,7 @@ function renderTable() {
   const left = state.players.find((player) => player.id === "left");
   const right = state.players.find((player) => player.id === "right");
   const current = currentPlayer();
+  ensureTablePlays();
   return `
     <section class="table">
       <header class="topbar">
@@ -705,11 +739,15 @@ function renderTable() {
       <section class="board">
         ${renderPlayer(left)}
         <div class="center">
-          <h2>${state.message || "准备开始"}</h2>
-          <div class="play-area">
-            ${state.currentTableCards.length ? state.currentTableCards.map((card) => renderCard(card, { static: true })).join("") : '<span class="pill empty-table">桌面暂无牌</span>'}
+          <div class="table-plays">
+            ${renderTablePlay(left, "left")}
+            <div class="table-state">
+              <h2>${state.message || "准备开始"}</h2>
+              <div class="table-note">${state.lastPlay ? `${state.players[state.lastPlay.playerIndex].name}：${state.lastPlay.pattern.name}` : "新一轮首出"}</div>
+            </div>
+            ${renderTablePlay(right, "right")}
+            ${renderTablePlay(human, "human")}
           </div>
-          <div class="table-note">${state.lastPlay ? `${state.players[state.lastPlay.playerIndex].name}：${state.lastPlay.pattern.name}` : "新一轮首出"}</div>
         </div>
         ${renderPlayer(right)}
       </section>
@@ -725,6 +763,25 @@ function renderTable() {
       </section>
       ${state.phase === "settlement" ? renderSettlement() : ""}
     </section>
+  `;
+}
+
+function renderTablePlay(player, position) {
+  const entry = ensureTablePlays()[player.id];
+  const isPass = entry?.type === "pass";
+  const cards = entry?.cards || [];
+  const overlap = cards.length > 1 ? Math.min(28, Math.max(14, Math.floor(132 / (cards.length - 1)))) : 0;
+  const width = cards.length ? 54 + overlap * (cards.length - 1) : 0;
+  return `
+    <div class="table-play table-play-${position} ${cards.length ? "has-cards" : ""} ${isPass ? "pass" : ""}">
+      <div class="table-play-label">
+        <span>${player.name}</span>
+        <strong>${entry?.pattern?.name || (isPass ? "不出" : "待出牌")}</strong>
+      </div>
+      <div class="play-area" style="--played-overlap:${overlap}px;--played-width:${width}px">
+        ${cards.length ? cards.map((card, index) => `<div class="played-card" style="--played-index:${index}">${renderCard(card, { static: true, small: true })}</div>`).join("") : `<span class="pill empty-table">${isPass ? "不出" : "暂无出牌"}</span>`}
+      </div>
+    </div>
   `;
 }
 
