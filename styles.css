@@ -656,11 +656,13 @@ button:disabled {
 
 .hand .card:hover:not(.back) {
   transform: none;
+  z-index: var(--card-index, 1);
 }
 
 .hand .card.selected:hover,
 .hand .card.selected {
   transform: translateY(-24px) rotate(-1deg);
+  z-index: calc(var(--card-index, 1) + 100);
 }
 
 .hand .card:focus {
