@@ -559,6 +559,7 @@ button:disabled {
   padding: 0;
   isolation: isolate;
   overflow: hidden;
+  touch-action: manipulation;
 }
 
 .hand .card {
@@ -651,6 +652,23 @@ button:disabled {
   .card.selected:hover {
     transform: translateY(-26px) rotate(-1deg);
   }
+}
+
+.hand .card:hover:not(.back) {
+  transform: none;
+}
+
+.hand .card.selected:hover,
+.hand .card.selected {
+  transform: translateY(-24px) rotate(-1deg);
+}
+
+.hand .card:focus {
+  outline: none;
+}
+
+.hand .card.selected:focus {
+  outline: 3px solid var(--gold);
 }
 
 .corner {

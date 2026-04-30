@@ -7,6 +7,7 @@ const SUITS = [
   ["diamond", "♦", true],
 ];
 const SAVE_KEY = "landlords-prd-game-state-v1";
+const BGM_SRC = "./assets/audio/bgm.mp3";
 const AI_DELAY = 650;
 const PATTERN_NAMES = {
   pass: "不出",
@@ -34,6 +35,7 @@ let countdownTimer = null;
 let toastTimer = null;
 let audioContext = null;
 let bgmNodes = [];
+let bgmAudio = null;
 
 function createDeck() {
   const deck = [];
@@ -937,6 +939,21 @@ function playSound(name) {
 }
 
 function startBackgroundMusic() {
+  if (!state.music) return;
+  if (!bgmAudio) {
+    bgmAudio = new Audio(BGM_SRC);
+    bgmAudio.loop = true;
+    bgmAudio.volume = 0.36;
+    bgmAudio.preload = "auto";
+  }
+  if (!bgmAudio.paused) return;
+  bgmAudio.play().catch(() => {
+    bgmAudio = null;
+    startSynthBackgroundMusic();
+  });
+}
+
+function startSynthBackgroundMusic() {
   if (!state.music || bgmNodes.length) return;
   const context = ensureAudio();
   const master = context.createGain();
@@ -956,6 +973,10 @@ function startBackgroundMusic() {
 }
 
 function stopBackgroundMusic() {
+  if (bgmAudio) {
+    bgmAudio.pause();
+    bgmAudio.currentTime = 0;
+  }
   for (const node of bgmNodes) {
     if (typeof node.stop === "function") {
       try {
