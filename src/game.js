@@ -588,8 +588,31 @@ function clearSave() {
 }
 
 function renderCard(card, options = {}) {
-  if (options.back) return `<div class="card ${options.small ? "small" : ""} back">牌</div>`;
-  return `<button class="card ${card.red ? "red" : ""} ${selectedIds.has(card.id) ? "selected" : ""} ${options.small ? "small" : ""}" data-card-id="${card.id}" data-suit="${card.suitSymbol || ""}" title="${card.displayName}">${card.displayName}</button>`;
+  const tag = options.static || options.back ? "div" : "button";
+  const classes = [
+    "card",
+    card?.red ? "red" : "",
+    selectedIds.has(card?.id) ? "selected" : "",
+    options.small ? "small" : "",
+    options.back ? "back" : "",
+    card?.suit === "joker" ? "joker" : "",
+  ].filter(Boolean).join(" ");
+  if (options.back) {
+    return `<div class="${classes}" aria-label="牌背"><span class="back-mark">DDZ</span></div>`;
+  }
+  const attrs = tag === "button" ? `data-card-id="${card.id}"` : "";
+  const suit = card.suitSymbol || (card.rank === "大王" ? "★" : "☆");
+  const jokerImage = card.rank === "大王" ? "./assets/cards/joker-big.svg" : "./assets/cards/joker-small.svg";
+  const center = card.suit === "joker"
+    ? `<img class="joker-art" src="${jokerImage}" alt="${card.displayName}">`
+    : `<span class="pip large">${suit}</span><span class="pip ghost">${suit}</span>`;
+  return `
+    <${tag} class="${classes}" ${attrs} title="${card.displayName}" aria-label="${card.displayName}">
+      <span class="corner top"><strong>${card.displayName}</strong><em>${suit}</em></span>
+      <span class="card-center">${center}</span>
+      <span class="corner bottom"><strong>${card.displayName}</strong><em>${suit}</em></span>
+    </${tag}>
+  `;
 }
 
 function render() {
@@ -608,8 +631,9 @@ function renderHome() {
   return `
     <section class="home">
       <div class="brand">
-        <h1>斗地主</h1>
-        <p>单机三人对战，完整叫抢地主、压牌、炸弹倍数、春天结算和本地恢复。底部真人玩家对两名电脑，打开即可开局。</p>
+        <div class="eyebrow">三人单机牌桌</div>
+        <h1>斗<span>地主</span></h1>
+        <p>完整叫抢地主、压牌、炸弹倍数、春天结算和本地恢复。底部真人玩家对两名电脑，开局后直接进入沉浸式牌桌。</p>
       </div>
       <div class="start-panel">
         <div class="field">
@@ -639,7 +663,7 @@ function renderTable() {
     <section class="table">
       <header class="topbar">
         <div class="status">
-          <span class="pill">阶段：${phaseName(state.phase, state.bidMode)}</span>
+          <span class="pill gold">阶段：${phaseName(state.phase, state.bidMode)}</span>
           <span class="pill">当前：${current?.name || "-"}</span>
           <span class="pill">倍数：x${state.multiplier}</span>
           <span class="pill">倒计时：${state.countdown || "-"}s</span>
@@ -658,9 +682,9 @@ function renderTable() {
         <div class="center">
           <h2>${state.message || "准备开始"}</h2>
           <div class="play-area">
-            ${state.currentTableCards.length ? state.currentTableCards.map((card) => renderCard(card)).join("") : '<span class="pill">桌面暂无牌</span>'}
+            ${state.currentTableCards.length ? state.currentTableCards.map((card) => renderCard(card, { static: true })).join("") : '<span class="pill empty-table">桌面暂无牌</span>'}
           </div>
-          <div>${state.lastPlay ? `${state.players[state.lastPlay.playerIndex].name}：${state.lastPlay.pattern.name}` : "新一轮首出"}</div>
+          <div class="table-note">${state.lastPlay ? `${state.players[state.lastPlay.playerIndex].name}：${state.lastPlay.pattern.name}` : "新一轮首出"}</div>
         </div>
         ${renderPlayer(right)}
       </section>
@@ -683,7 +707,11 @@ function renderPlayer(player) {
   const last = state.history.find((item) => item.playerId === player.id);
   return `
     <div class="player ${currentPlayer()?.id === player.id ? "current" : ""}">
-      <div class="player-name"><span>${player.name}</span><span class="role">${roleName(player.role)}</span></div>
+      <div class="player-name"><span class="avatar">${player.name.slice(0, 1)}</span><span>${player.name}</span><span class="role">${roleName(player.role)}</span></div>
+      <div class="opponent-stack" aria-label="剩余 ${player.handCards.length} 张">
+        <span class="mini-back"></span><span class="mini-back"></span><span class="mini-back"></span>
+        <strong>${player.handCards.length}</strong>
+      </div>
       <div class="pill">剩余 ${player.handCards.length} 张 ${player.thinking ? '<span class="thinking">思考中</span>' : ""}</div>
       <div class="last-small">${last ? last.text : "尚未行动"}</div>
     </div>
