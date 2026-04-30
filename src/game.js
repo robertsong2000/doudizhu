@@ -32,6 +32,8 @@ let selectedIds = new Set();
 let aiTimer = null;
 let countdownTimer = null;
 let toastTimer = null;
+let audioContext = null;
+let bgmNodes = [];
 
 function createDeck() {
   const deck = [];
@@ -73,6 +75,7 @@ function createInitialState() {
     difficulty: settings.difficulty,
     theme: settings.theme,
     sound: settings.sound,
+    music: settings.music,
     scores: { human: 0, left: 0, right: 0 },
   };
 }
@@ -95,6 +98,7 @@ function newGame(difficulty = state.difficulty || "normal") {
     difficulty,
     theme: state.theme || "dark",
     sound: Boolean(state.sound),
+    music: Boolean(state.music),
     players,
     scores: state.scores || { human: 0, left: 0, right: 0 },
     landlordCards: deck.slice(51),
@@ -121,6 +125,8 @@ function newGame(difficulty = state.difficulty || "normal") {
   selectedIds = new Set();
   persist();
   render();
+  playSound("deal");
+  startBackgroundMusic();
   scheduleAutomation();
 }
 
@@ -218,6 +224,7 @@ function applyBidDecision(playerIndex, wants) {
   if (state.bidMode === "call") {
     state.bidTurns += 1;
     addHistory(player, wants ? "叫地主" : "不叫");
+    playSound(wants ? "bid" : "pass");
     if (wants) {
       state.calledPlayerIndex = playerIndex;
       state.lastRobberIndex = playerIndex;
@@ -235,6 +242,7 @@ function applyBidDecision(playerIndex, wants) {
   } else {
     state.robTurns += 1;
     addHistory(player, wants ? "抢地主" : "不抢");
+    playSound(wants ? "bid" : "pass");
     if (wants) {
       state.lastRobberIndex = playerIndex;
       state.multiplier *= 2;
@@ -270,6 +278,7 @@ function confirmLandlord(index) {
   state.message = `${landlord.name} 成为地主并首出`;
   state.countdown = 30;
   addHistory(landlord, `成为地主，拿到底牌 ${state.landlordCards.map((c) => c.displayName).join(" ")}`);
+  playSound("landlord");
   persist();
   render();
   scheduleAutomation();
@@ -317,6 +326,7 @@ function commitPlay(playerIndex, cards, pattern) {
     state.multiplier *= 2;
     state.bombCount += 1;
   }
+  playSound(pattern.type === "bomb" || pattern.type === "rocket" ? "bomb" : "play");
   addHistory(player, `${pattern.name} ${cards.map((card) => card.displayName).join(" ")}`);
   if (player.handCards.length === 0) {
     settle(player);
@@ -333,6 +343,7 @@ function commitPlay(playerIndex, cards, pattern) {
 function commitPass(playerIndex) {
   const player = state.players[playerIndex];
   state.passCount += 1;
+  playSound("pass");
   addHistory(player, "不出");
   selectedIds = new Set();
   if (state.passCount >= 2 && state.lastPlay) {
@@ -375,6 +386,7 @@ function settle(winner) {
   state.winnerRole = winnerRole;
   state.settlement = { winnerId: winner.id, winnerRole, spring, scoreDelta, finalMultiplier: state.multiplier };
   state.message = winnerRole === "landlord" ? "地主胜利" : "农民胜利";
+  playSound(state.players.find((p) => p.id === "human").role === winnerRole ? "win" : "lose");
   persist();
   render();
 }
@@ -559,7 +571,7 @@ function autoHumanAction() {
 function persist() {
   state.updatedAt = Date.now();
   localStorage.setItem(SAVE_KEY, JSON.stringify(state));
-  localStorage.setItem("landlords-settings-v1", JSON.stringify({ difficulty: state.difficulty, theme: state.theme, sound: state.sound }));
+  localStorage.setItem("landlords-settings-v1", JSON.stringify({ difficulty: state.difficulty, theme: state.theme, sound: state.sound, music: state.music }));
 }
 
 function loadState() {
@@ -575,14 +587,15 @@ function loadState() {
 
 function loadSettings() {
   try {
-    return { difficulty: "normal", theme: "dark", sound: false, ...JSON.parse(localStorage.getItem("landlords-settings-v1") || "{}") };
+    return { difficulty: "normal", theme: "dark", sound: true, music: false, ...JSON.parse(localStorage.getItem("landlords-settings-v1") || "{}") };
   } catch {
-    return { difficulty: "normal", theme: "dark", sound: false };
+    return { difficulty: "normal", theme: "dark", sound: true, music: false };
   }
 }
 
 function clearSave() {
   localStorage.removeItem(SAVE_KEY);
+  stopBackgroundMusic();
   state = createInitialState();
   render();
 }
@@ -600,14 +613,22 @@ function renderCard(card, options = {}) {
   if (options.back) {
     return `<div class="${classes}" aria-label="牌背"><span class="back-mark">DDZ</span></div>`;
   }
-  const attrs = tag === "button" ? `data-card-id="${card.id}"` : "";
+  const attrs = tag === "button" ? `type="button" data-card-id="${card.id}"` : "";
+  const style = options.index != null ? `style="--card-index:${options.index + 1}"` : "";
   const suit = card.suitSymbol || (card.rank === "大王" ? "★" : "☆");
-  const jokerImage = card.rank === "大王" ? "./assets/cards/joker-big.svg" : "./assets/cards/joker-small.svg";
+  const jokerImage = card.rank === "大王" ? "./assets/avatars/joker-big.png" : "./assets/avatars/joker-small.png";
   const center = card.suit === "joker"
     ? `<img class="joker-art" src="${jokerImage}" alt="${card.displayName}">`
     : `<span class="pip large">${suit}</span><span class="pip ghost">${suit}</span>`;
+  if (card.suit === "joker") {
+    return `
+      <${tag} class="${classes}" ${attrs} ${style} title="${card.displayName}" aria-label="${card.displayName}">
+        <span class="card-center">${center}</span>
+      </${tag}>
+    `;
+  }
   return `
-    <${tag} class="${classes}" ${attrs} title="${card.displayName}" aria-label="${card.displayName}">
+    <${tag} class="${classes}" ${attrs} ${style} title="${card.displayName}" aria-label="${card.displayName}">
       <span class="corner top"><strong>${card.displayName}</strong><em>${suit}</em></span>
       <span class="card-center">${center}</span>
       <span class="corner bottom"><strong>${card.displayName}</strong><em>${suit}</em></span>
@@ -672,6 +693,8 @@ function renderTable() {
           ${state.landlordCards.map((card) => renderCard(card, { small: true, back: state.phase === "bidding" })).join("")}
         </div>
         <div class="settings">
+          <button class="icon-button" data-action="music" title="${state.music ? "关闭音乐" : "开启音乐"}">♪</button>
+          <button class="icon-button" data-action="sound" title="${state.sound ? "关闭音效" : "开启音效"}">${state.sound ? "声" : "静"}</button>
           <button class="icon-button" data-action="theme" title="切换主题">◐</button>
           <button class="danger" data-action="restart">重开</button>
           <button class="secondary" data-action="home">首页</button>
@@ -691,7 +714,7 @@ function renderTable() {
       <section class="bottom">
         <div class="hand-zone">
           ${renderPlayerSummary(human)}
-          <div class="hand">${human.handCards.map((card) => renderCard(card)).join("")}</div>
+          <div class="hand" style="--hand-count:${human.handCards.length}">${human.handCards.map((card, index) => renderCard(card, { index })).join("")}</div>
         </div>
         <aside>
           ${renderControls()}
@@ -707,7 +730,7 @@ function renderPlayer(player) {
   const last = state.history.find((item) => item.playerId === player.id);
   return `
     <div class="player ${currentPlayer()?.id === player.id ? "current" : ""}">
-      <div class="player-name"><span class="avatar">${player.name.slice(0, 1)}</span><span>${player.name}</span><span class="role">${roleName(player.role)}</span></div>
+      <div class="player-name">${renderAvatar(player)}<span>${player.name}</span><span class="role">${roleName(player.role)}</span></div>
       <div class="opponent-stack" aria-label="剩余 ${player.handCards.length} 张">
         <span class="mini-back"></span><span class="mini-back"></span><span class="mini-back"></span>
         <strong>${player.handCards.length}</strong>
@@ -721,6 +744,7 @@ function renderPlayer(player) {
 function renderPlayerSummary(player) {
   return `
     <div class="status">
+      ${renderAvatar(player, true)}
       <span class="pill">${player.name}</span>
       <span class="pill">${roleName(player.role)}</span>
       <span class="pill">剩余 ${player.handCards.length} 张</span>
@@ -728,6 +752,18 @@ function renderPlayerSummary(player) {
       ${player.isAutoPlay ? '<span class="pill">托管中</span>' : ""}
     </div>
   `;
+}
+
+function renderAvatar(player, compact = false) {
+  const src = roleAvatarSrc(player.role);
+  if (!src) return `<span class="avatar ${compact ? "compact" : ""}">${player.name.slice(0, 1)}</span>`;
+  return `<span class="avatar image ${compact ? "compact" : ""}"><img src="${src}" alt="${roleName(player.role)}"></span>`;
+}
+
+function roleAvatarSrc(role) {
+  if (role === "landlord") return "./assets/avatars/landlord.png";
+  if (role === "farmer") return "./assets/avatars/farmer.png";
+  return "";
 }
 
 function renderControls() {
@@ -792,15 +828,26 @@ function bindEvents() {
     });
   });
   document.querySelectorAll("[data-card-id]").forEach((button) => {
-    button.addEventListener("click", () => toggleCard(button.dataset.cardId));
+    button.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      toggleCard(button.dataset.cardId);
+    });
+    button.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        toggleCard(button.dataset.cardId);
+      }
+    });
   });
   document.querySelectorAll("[data-action]").forEach((button) => {
     button.addEventListener("click", () => {
       const action = button.dataset.action;
+      resumeAudio();
       if (action === "start" || action === "again" || action === "restart") newGame(state.difficulty);
       if (action === "resume") {
         state = loadState() || state;
         render();
+        startBackgroundMusic();
         scheduleAutomation();
       }
       if (action === "home") clearSave();
@@ -815,11 +862,25 @@ function bindEvents() {
         persist();
         render();
       }
+      if (action === "sound") {
+        state.sound = !state.sound;
+        persist();
+        if (state.sound) playSound("click");
+        render();
+      }
+      if (action === "music") {
+        state.music = !state.music;
+        persist();
+        if (state.music) startBackgroundMusic();
+        else stopBackgroundMusic();
+        render();
+      }
     });
   });
 }
 
 function showToast(text) {
+  playSound("error");
   clearTimeout(toastTimer);
   let toast = document.querySelector(".toast");
   if (!toast) {
@@ -829,6 +890,84 @@ function showToast(text) {
   }
   toast.textContent = text;
   toastTimer = setTimeout(() => toast.remove(), 2200);
+}
+
+function ensureAudio() {
+  if (!audioContext) audioContext = new AudioContext();
+  return audioContext;
+}
+
+function resumeAudio() {
+  if (!audioContext) return;
+  if (audioContext.state === "suspended") audioContext.resume();
+}
+
+function playTone(frequency, duration = 0.12, options = {}) {
+  if (!state.sound) return;
+  const context = ensureAudio();
+  const now = context.currentTime + (options.delay || 0);
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  oscillator.type = options.type || "triangle";
+  oscillator.frequency.setValueAtTime(frequency, now);
+  if (options.to) oscillator.frequency.exponentialRampToValueAtTime(options.to, now + duration);
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(options.gain || 0.05, now + 0.015);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  oscillator.connect(gain).connect(context.destination);
+  oscillator.start(now);
+  oscillator.stop(now + duration + 0.03);
+}
+
+function playSound(name) {
+  if (!state.sound) return;
+  const sounds = {
+    click: () => playTone(520, 0.08, { gain: 0.035 }),
+    deal: () => [0, 0.05, 0.1].forEach((delay) => playTone(420 + delay * 900, 0.07, { delay, gain: 0.035 })),
+    bid: () => [520, 760].forEach((freq, index) => playTone(freq, 0.1, { delay: index * 0.07, gain: 0.045 })),
+    play: () => playTone(620, 0.09, { to: 390, gain: 0.045 }),
+    pass: () => playTone(260, 0.12, { type: "sine", gain: 0.03 }),
+    landlord: () => [440, 660, 880].forEach((freq, index) => playTone(freq, 0.11, { delay: index * 0.08, gain: 0.042 })),
+    bomb: () => [120, 90, 180].forEach((freq, index) => playTone(freq, 0.18, { delay: index * 0.045, type: "sawtooth", gain: 0.06 })),
+    win: () => [523, 659, 784, 1046].forEach((freq, index) => playTone(freq, 0.13, { delay: index * 0.08, gain: 0.05 })),
+    lose: () => [392, 330, 262].forEach((freq, index) => playTone(freq, 0.16, { delay: index * 0.1, type: "sine", gain: 0.04 })),
+    error: () => playTone(180, 0.12, { type: "square", gain: 0.025 }),
+  };
+  sounds[name]?.();
+}
+
+function startBackgroundMusic() {
+  if (!state.music || bgmNodes.length) return;
+  const context = ensureAudio();
+  const master = context.createGain();
+  master.gain.setValueAtTime(0.018, context.currentTime);
+  master.connect(context.destination);
+  bgmNodes = [196, 246.94, 329.63].map((freq, index) => {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = index === 0 ? "sine" : "triangle";
+    oscillator.frequency.value = freq;
+    gain.gain.value = index === 0 ? 0.72 : 0.36;
+    oscillator.connect(gain).connect(master);
+    oscillator.start();
+    return oscillator;
+  });
+  bgmNodes.push(master);
+}
+
+function stopBackgroundMusic() {
+  for (const node of bgmNodes) {
+    if (typeof node.stop === "function") {
+      try {
+        node.stop();
+      } catch {
+        // Oscillators can only be stopped once.
+      }
+    } else if (typeof node.disconnect === "function") {
+      node.disconnect();
+    }
+  }
+  bgmNodes = [];
 }
 
 function difficultyName(level) {

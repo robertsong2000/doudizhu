@@ -16,8 +16,7 @@
   </defs>
   <rect x="7" y="7" width="166" height="238" rx="16" fill="url(#paper)" stroke="#d8c3a0" stroke-width="4"/>
   <rect x="18" y="18" width="144" height="216" rx="11" fill="none" stroke="#7e5b35" stroke-opacity=".18" stroke-width="2"/>
-  <text x="27" y="40" fill="#bb1d2a" font-family="Georgia, serif" font-size="22" font-weight="800">大王</text>
-  <text x="27" y="62" fill="#bb1d2a" font-family="Georgia, serif" font-size="22">★</text>
+  <path d="M32 33 39 47l15 2-11 10 3 15-14-8-14 8 3-15-11-10 15-2 7-14Z" fill="#bb1d2a" opacity=".8"/>
   <g filter="url(#shadow)">
     <path d="M90 37 107 70l36 6-26 26 7 37-34-18-34 18 7-37-26-26 36-6L90 37Z" fill="#efc75e"/>
     <path d="M90 54c21 19 36 42 44 68 7 24 4 47-8 70-5 9-12 18-20 26H74c-9-8-15-17-20-26-12-23-15-46-8-70 8-26 23-49 44-68Z" fill="url(#robe)"/>
@@ -27,9 +26,7 @@
     <path d="M70 162c12 10 28 10 40 0" fill="none" stroke="#ffe1a1" stroke-width="8" stroke-linecap="round"/>
     <path d="M60 207h60l-13 18H73l-13-18Z" fill="#efc75e"/>
   </g>
-  <text x="90" y="226" text-anchor="middle" fill="#bb1d2a" font-family="Georgia, serif" font-size="18" font-weight="900" letter-spacing="3">JOKER</text>
   <g transform="rotate(180 90 126)">
-    <text x="27" y="40" fill="#bb1d2a" font-family="Georgia, serif" font-size="22" font-weight="800">大王</text>
-    <text x="27" y="62" fill="#bb1d2a" font-family="Georgia, serif" font-size="22">★</text>
+    <path d="M32 33 39 47l15 2-11 10 3 15-14-8-14 8 3-15-11-10 15-2 7-14Z" fill="#bb1d2a" opacity=".8"/>
   </g>
 </svg>
