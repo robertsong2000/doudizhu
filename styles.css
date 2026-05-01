@@ -109,24 +109,34 @@ button:disabled {
   z-index: -1;
 }
 
-.brand::after {
-  content: "JOKER";
+.home-jokers {
   position: absolute;
   right: 12%;
   top: 34%;
-  width: 132px;
-  height: 184px;
-  display: grid;
-  place-items: center;
+  width: 184px;
+  height: 202px;
+  pointer-events: none;
+}
+
+.home-jokers img {
+  position: absolute;
+  bottom: 0;
+  width: 116px;
+  height: 174px;
+  object-fit: contain;
   border-radius: 10px;
-  color: #8f1d25;
-  font-family: Georgia, "Songti SC", serif;
-  font-size: 22px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
   background: linear-gradient(145deg, #fffdf6, #e9d3ad);
   box-shadow: 0 26px 46px rgba(0, 0, 0, 0.34);
-  transform: rotate(11deg);
+}
+
+.home-jokers img:first-child {
+  left: 0;
+  transform: rotate(-8deg);
+}
+
+.home-jokers img:last-child {
+  right: 0;
+  transform: rotate(10deg) translateY(-10px);
 }
 
 .eyebrow {
@@ -569,7 +579,7 @@ button:disabled {
 
 .table-play .play-area {
   width: min(100%, calc(var(--played-width, 0px) + 16px));
-  min-height: 74px;
+  min-height: 96px;
   align-self: center;
   justify-self: center;
   display: block;
@@ -577,7 +587,7 @@ button:disabled {
 }
 
 .table-play-human .play-area {
-  min-height: 74px;
+  min-height: 96px;
 }
 
 .play-area .card {
@@ -591,19 +601,21 @@ button:disabled {
   transform: translate(calc(var(--played-index) * var(--played-overlap, 18px)), -50%);
 }
 
-.played-card .card {
-  width: 54px;
-  height: 76px;
+.played-card .card,
+.played-card .card.small {
+  width: 64px;
+  height: 90px;
   border-radius: 7px;
   box-shadow: 0 8px 14px rgba(0, 0, 0, 0.24), inset 0 0 0 2px rgba(255, 255, 255, 0.28);
+  font-size: 13px;
 }
 
 .played-card .card.small .corner strong {
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .played-card .card.small .pip.large {
-  font-size: 19px;
+  font-size: 24px;
 }
 
 .empty-table {
@@ -1044,11 +1056,16 @@ button:disabled {
     max-width: none;
   }
 
-  .brand::after {
+  .home-jokers {
     right: 2%;
     top: 44%;
-    width: 108px;
-    height: 150px;
+    width: 154px;
+    height: 174px;
+  }
+
+  .home-jokers img {
+    width: 96px;
+    height: 144px;
   }
 
   .brand h1 {

@@ -690,6 +690,10 @@ function renderHome() {
         <div class="eyebrow">三人单机牌桌</div>
         <h1>斗<span>地主</span></h1>
         <p>完整叫抢地主、压牌、炸弹倍数、春天结算和本地恢复。底部真人玩家对两名电脑，开局后直接进入沉浸式牌桌。</p>
+        <div class="home-jokers" aria-label="大小王">
+          <img src="./assets/avatars/joker-small.png" alt="小王">
+          <img src="./assets/avatars/joker-big.png" alt="大王">
+        </div>
       </div>
       <div class="start-panel">
         <div class="field">
@@ -770,8 +774,8 @@ function renderTablePlay(player, position) {
   const entry = ensureTablePlays()[player.id];
   const isPass = entry?.type === "pass";
   const cards = entry?.cards || [];
-  const overlap = cards.length > 1 ? Math.min(28, Math.max(14, Math.floor(132 / (cards.length - 1)))) : 0;
-  const width = cards.length ? 54 + overlap * (cards.length - 1) : 0;
+  const overlap = cards.length > 1 ? Math.min(32, Math.max(16, Math.floor(150 / (cards.length - 1)))) : 0;
+  const width = cards.length ? 64 + overlap * (cards.length - 1) : 0;
   return `
     <div class="table-play table-play-${position} ${cards.length ? "has-cards" : ""} ${isPass ? "pass" : ""}">
       <div class="table-play-label">
@@ -899,43 +903,51 @@ function bindEvents() {
     });
   });
   document.querySelectorAll("[data-action]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const action = button.dataset.action;
-      resumeAudio();
-      if (action === "start" || action === "again" || action === "restart") newGame(state.difficulty);
-      if (action === "resume") {
-        state = loadState() || state;
-        render();
-        startBackgroundMusic();
-        scheduleAutomation();
-      }
-      if (action === "home") clearSave();
-      if (action === "bid-yes") handleBid(true);
-      if (action === "bid-no") handleBid(false);
-      if (action === "play") playSelected();
-      if (action === "pass") passTurn();
-      if (action === "hint") suggestCards();
-      if (action === "autoplay") toggleAutoplay();
-      if (action === "theme") {
-        state.theme = state.theme === "dark" ? "light" : "dark";
-        persist();
-        render();
-      }
-      if (action === "sound") {
-        state.sound = !state.sound;
-        persist();
-        if (state.sound) playSound("click");
-        render();
-      }
-      if (action === "music") {
-        state.music = !state.music;
-        persist();
-        if (state.music) startBackgroundMusic();
-        else stopBackgroundMusic();
-        render();
-      }
+    const activate = (event) => {
+      event.preventDefault();
+      runAction(button.dataset.action);
+    };
+    button.addEventListener("pointerdown", activate);
+    button.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") activate(event);
     });
   });
+}
+
+function runAction(action) {
+  resumeAudio();
+  if (action === "start" || action === "again" || action === "restart") newGame(state.difficulty);
+  if (action === "resume") {
+    state = loadState() || state;
+    render();
+    startBackgroundMusic();
+    scheduleAutomation();
+  }
+  if (action === "home") clearSave();
+  if (action === "bid-yes") handleBid(true);
+  if (action === "bid-no") handleBid(false);
+  if (action === "play") playSelected();
+  if (action === "pass") passTurn();
+  if (action === "hint") suggestCards();
+  if (action === "autoplay") toggleAutoplay();
+  if (action === "theme") {
+    state.theme = state.theme === "dark" ? "light" : "dark";
+    persist();
+    render();
+  }
+  if (action === "sound") {
+    state.sound = !state.sound;
+    persist();
+    if (state.sound) playSound("click");
+    render();
+  }
+  if (action === "music") {
+    state.music = !state.music;
+    persist();
+    if (state.music) startBackgroundMusic();
+    else stopBackgroundMusic();
+    render();
+  }
 }
 
 function showToast(text) {
