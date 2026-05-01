@@ -650,8 +650,9 @@ button:disabled {
 }
 
 .hand-zone {
+  position: relative;
   min-width: 0;
-  padding: 12px 12px 6px;
+  padding: 58px 12px 6px;
   background:
     linear-gradient(180deg, rgba(255, 247, 230, 0.08), transparent 44%),
     linear-gradient(145deg, rgba(46, 30, 21, 0.92), rgba(10, 48, 40, 0.74));
@@ -661,7 +662,6 @@ button:disabled {
   width: fit-content;
   max-width: 100%;
   min-height: 44px;
-  margin: 8px auto -12px;
   padding: 6px;
   display: flex;
   align-items: center;
@@ -670,7 +670,10 @@ button:disabled {
   border-radius: 8px;
   background: rgba(10, 44, 38, 0.86);
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  position: relative;
+  position: absolute;
+  left: 50%;
+  top: 14px;
+  transform: translateX(-50%);
   z-index: 150;
 }
 
@@ -1179,9 +1182,9 @@ button:disabled {
 
   .quick-controls {
     width: 100%;
+    max-width: calc(100% - 20px);
     justify-content: center;
     flex-wrap: wrap;
-    margin-bottom: -8px;
   }
 
   .quick-controls button {
