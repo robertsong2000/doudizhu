@@ -758,6 +758,7 @@ function renderTable() {
       <section class="bottom">
         <div class="hand-zone">
           ${renderPlayerSummary(human)}
+          ${renderHandQuickControls()}
           <div class="hand" style="--hand-count:${human.handCards.length}">${human.handCards.map((card, index) => renderCard(card, { index })).join("")}</div>
         </div>
         <aside>
@@ -813,6 +814,19 @@ function renderPlayerSummary(player) {
       <span class="pill">剩余 ${player.handCards.length} 张</span>
       <span class="pill">积分 ${state.scores.human}</span>
       ${player.isAutoPlay ? '<span class="pill">托管中</span>' : ""}
+    </div>
+  `;
+}
+
+function renderHandQuickControls() {
+  const isHumanTurn = humanCanAct();
+  if (state.phase !== "playing" || !isHumanTurn || selectedIds.size === 0) return "";
+  return `
+    <div class="quick-controls">
+      <span class="quick-count">已选 ${selectedIds.size} 张</span>
+      <button class="secondary" data-action="hint">提示</button>
+      <button class="primary" data-action="play">出牌</button>
+      <button class="secondary" data-action="pass" ${!state.lastPlay ? "disabled" : ""}>不出</button>
     </div>
   `;
 }

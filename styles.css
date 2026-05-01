@@ -657,6 +657,36 @@ button:disabled {
     linear-gradient(145deg, rgba(46, 30, 21, 0.92), rgba(10, 48, 40, 0.74));
 }
 
+.quick-controls {
+  width: fit-content;
+  max-width: 100%;
+  min-height: 44px;
+  margin: 8px auto -12px;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(255, 221, 153, 0.24);
+  border-radius: 8px;
+  background: rgba(10, 44, 38, 0.86);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  position: relative;
+  z-index: 150;
+}
+
+.quick-controls button {
+  min-height: 34px;
+  padding: 0 13px;
+}
+
+.quick-count {
+  padding: 0 7px;
+  color: rgba(255, 247, 230, 0.76);
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 .hand {
   --card-width: clamp(52px, 4.3vw, 64px);
   --card-overlap: clamp(-28px, -1.85vw, -20px);
@@ -1145,6 +1175,17 @@ button:disabled {
     justify-content: flex-start;
     overflow-x: hidden;
     padding-left: 20px;
+  }
+
+  .quick-controls {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: -8px;
+  }
+
+  .quick-controls button {
+    flex: 1 1 72px;
   }
 
   .table-plays {
