@@ -35,4 +35,8 @@ const hand = byRank("3").concat(byRank("4")).concat(byRank("5")).concat(byRank("
 const candidates = findCandidatePlays(hand, identifyPattern(byRank("Q")));
 assert.ok(candidates.some((cards) => cards.length === 1 && cards[0].rank === "K"));
 
+const pairHintHand = byRank("9", 2).concat(byRank("10", 2), byRank("K", 2));
+const pairHints = findCandidatePlays(pairHintHand, identifyPattern(byRank("5", 2)));
+assert.deepEqual(pairHints[0].map((card) => card.rank), ["9", "9"]);
+
 console.log("rules.test.mjs passed");

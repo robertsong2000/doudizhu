@@ -132,6 +132,7 @@ function newGame(difficulty = state.difficulty || "normal") {
     bombCount: 0,
     history: [],
     selectedHintIndex: 0,
+    hintTargetKey: "",
     playedHandCounts: { human: 0, left: 0, right: 0 },
     message: "",
     countdown: 20,
@@ -541,10 +542,21 @@ function suggestCards() {
     showToast("没有可压过的牌，可以不出");
     return;
   }
+  const targetKey = getHintTargetKey();
+  if (state.hintTargetKey !== targetKey) {
+    state.hintTargetKey = targetKey;
+    state.selectedHintIndex = 0;
+  }
   const choice = candidates[state.selectedHintIndex % candidates.length];
   state.selectedHintIndex += 1;
   selectedIds = new Set(choice.map((card) => card.id));
   render();
+}
+
+function getHintTargetKey() {
+  if (!state.lastPlay) return "lead";
+  const { playerId, pattern } = state.lastPlay;
+  return `${playerId}:${pattern.type}:${pattern.length}:${pattern.mainWeight}`;
 }
 
 function toggleCard(cardId) {
@@ -820,10 +832,11 @@ function renderPlayerSummary(player) {
 
 function renderHandQuickControls() {
   const isHumanTurn = humanCanAct();
-  if (state.phase !== "playing" || !isHumanTurn || selectedIds.size === 0) return "";
+  if (state.phase !== "playing" || !isHumanTurn) return "";
+  const selectedLabel = selectedIds.size > 0 ? `已选 ${selectedIds.size} 张` : "请选择手牌";
   return `
     <div class="quick-controls">
-      <span class="quick-count">已选 ${selectedIds.size} 张</span>
+      <span class="quick-count">${selectedLabel}</span>
       <button class="secondary" data-action="hint">提示</button>
       <button class="primary" data-action="play">出牌</button>
       <button class="secondary" data-action="pass" ${!state.lastPlay ? "disabled" : ""}>不出</button>
